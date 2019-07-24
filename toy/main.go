@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/pseyfert/workpool"
+	"github.com/pseyfert/go-workpool"
 )
 
 func prepare(pipe chan *exec.Cmd, i int) {
