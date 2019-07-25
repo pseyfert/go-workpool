@@ -79,7 +79,7 @@ func DefaultPrint(outpipe chan Output) {
 		} else {
 			if out.Err != nil {
 				if exitError, ok := out.Err.(*exec.ExitError); ok {
-					fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
+					fmt.Printf("%d command failed: %s %s\n", exitError.ExitCode(), out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
 				} else {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
@@ -99,12 +99,14 @@ func DrawProgress(outpipe chan Output, length int) {
 			break
 		} else {
 			if out.Err != nil {
+				fmt.Println()
 				if exitError, ok := out.Err.(*exec.ExitError); ok {
-					fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
+					fmt.Printf("%d command failed: %s %s\n", exitError.ExitCode(), out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
 				} else {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
 			}
+			// TODO: inser line break if not done already, but only if there is some printout
 			io.Copy(os.Stdout, out.Stdout)
 			io.Copy(os.Stderr, out.Stderr)
 			bar.Add(1)
@@ -121,7 +123,7 @@ func AbortOnFailure(outpipe chan Output) {
 		} else {
 			if out.Err != nil {
 				if exitError, ok := out.Err.(*exec.ExitError); ok {
-					fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
+					fmt.Printf("%d command failed: %s %s\n", exitError.ExitCode(), out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
 				} else {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
