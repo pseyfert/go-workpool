@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/schollz/progressbar"
@@ -80,7 +81,10 @@ func DefaultPrint(outpipe chan Output) {
 		} else {
 			if out.Err != nil {
 				if exitError, ok := out.Err.(*exec.ExitError); ok {
-					fmt.Printf("%d command failed: %s %s\n", exitError.ExitCode(), out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
+					waitStatus := exitError.Sys().(syscall.WaitStatus)
+					ec := waitStatus.ExitStatus()
+					// ec := exitError.ExitCode()
+					fmt.Printf("%d command failed: %s %s\n", ec, out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
 				} else {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
@@ -108,7 +112,10 @@ func DrawProgress(outpipe chan Output, length int) {
 			if out.Err != nil {
 				fmt.Println()
 				if exitError, ok := out.Err.(*exec.ExitError); ok {
-					fmt.Printf("%d command failed: %s %s\n", exitError.ExitCode(), out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
+					waitStatus := exitError.Sys().(syscall.WaitStatus)
+					ec := waitStatus.ExitStatus()
+					// ec := exitError.ExitCode()
+					fmt.Printf("%d command failed: %s %s\n", ec, out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
 				} else {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
@@ -136,7 +143,10 @@ func AbortOnFailure(outpipe chan Output) {
 		} else {
 			if out.Err != nil {
 				if exitError, ok := out.Err.(*exec.ExitError); ok {
-					fmt.Printf("%d command failed: %s %s\n", exitError.ExitCode(), out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
+					waitStatus := exitError.Sys().(syscall.WaitStatus)
+					ec := waitStatus.ExitStatus()
+					// ec := exitError.ExitCode()
+					fmt.Printf("%d command failed: %s %s\n", ec, out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
 				} else {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
