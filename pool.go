@@ -13,7 +13,10 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
+
+	"github.com/schollz/progressbar"
 )
 
 type Output struct {
@@ -76,13 +79,58 @@ func DefaultPrint(outpipe chan Output) {
 		} else {
 			if out.Err != nil {
 				if exitError, ok := out.Err.(*exec.ExitError); ok {
-					fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), out.Cmd.Path)
+					fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
 				} else {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
 			}
 			io.Copy(os.Stdout, out.Stdout)
 			io.Copy(os.Stderr, out.Stderr)
+		}
+	}
+}
+
+func DrawProgress(outpipe chan Output, length int) {
+	bar := progressbar.NewOptions(length, progressbar.OptionShowIts(), progressbar.OptionShowCount(), progressbar.OptionClearOnFinish())
+	bar.RenderBlank()
+	for {
+		out, ok := <-outpipe
+		if !ok {
+			break
+		} else {
+			if out.Err != nil {
+				if exitError, ok := out.Err.(*exec.ExitError); ok {
+					fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
+				} else {
+					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
+				}
+			}
+			io.Copy(os.Stdout, out.Stdout)
+			io.Copy(os.Stderr, out.Stderr)
+			bar.Add(1)
+		}
+	}
+	bar.Finish()
+}
+
+func AbortOnFailure(outpipe chan Output) {
+	for {
+		out, ok := <-outpipe
+		if !ok {
+			break
+		} else {
+			if out.Err != nil {
+				if exitError, ok := out.Err.(*exec.ExitError); ok {
+					fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
+				} else {
+					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
+				}
+			}
+			io.Copy(os.Stdout, out.Stdout)
+			io.Copy(os.Stderr, out.Stderr)
+			if out.Err != nil {
+				break
+			}
 		}
 	}
 }

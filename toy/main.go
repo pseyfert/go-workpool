@@ -37,4 +37,6 @@ func main() {
 	}()
 
 	workpool.DefaultPrint(outpipe)
+	// workpool.DrawProgress(outpipe, *N)
+	// workpool.AbortOnFailure(outpipe)
 }
