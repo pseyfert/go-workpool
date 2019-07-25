@@ -9,6 +9,7 @@
 package workpool
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -20,8 +21,8 @@ import (
 )
 
 type Output struct {
-	Stderr io.ReadCloser
-	Stdout io.ReadCloser
+	Stderr bytes.Buffer
+	Stdout bytes.Buffer
 	Err    error
 	Start  time.Time
 	End    time.Time
@@ -34,8 +35,8 @@ func process_pipe(tasks chan *exec.Cmd, outpipe chan Output) {
 
 	process := func(cmd *exec.Cmd) Output {
 		var out Output
-		out.Stdout, _ = cmd.StdoutPipe()
-		out.Stderr, _ = cmd.StderrPipe()
+		cmd.Stdout = &out.Stdout
+		cmd.Stderr = &out.Stderr
 		out.Start = time.Now()
 		out.Err = cmd.Run()
 		out.End = time.Now()
@@ -84,8 +85,8 @@ func DefaultPrint(outpipe chan Output) {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
 			}
-			io.Copy(os.Stdout, out.Stdout)
-			io.Copy(os.Stderr, out.Stderr)
+			io.Copy(os.Stdout, &out.Stdout)
+			io.Copy(os.Stderr, &out.Stderr)
 		}
 	}
 }
@@ -107,8 +108,8 @@ func DrawProgress(outpipe chan Output, length int) {
 				}
 			}
 			// TODO: inser line break if not done already, but only if there is some printout
-			io.Copy(os.Stdout, out.Stdout)
-			io.Copy(os.Stderr, out.Stderr)
+			io.Copy(os.Stdout, &out.Stdout)
+			io.Copy(os.Stderr, &out.Stderr)
 			bar.Add(1)
 		}
 	}
@@ -128,8 +129,8 @@ func AbortOnFailure(outpipe chan Output) {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
 			}
-			io.Copy(os.Stdout, out.Stdout)
-			io.Copy(os.Stderr, out.Stderr)
+			io.Copy(os.Stdout, &out.Stdout)
+			io.Copy(os.Stderr, &out.Stderr)
 			if out.Err != nil {
 				break
 			}
