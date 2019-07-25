@@ -85,8 +85,14 @@ func DefaultPrint(outpipe chan Output) {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
 			}
-			io.Copy(os.Stdout, &out.Stdout)
-			io.Copy(os.Stderr, &out.Stderr)
+			_, err := io.Copy(os.Stdout, &out.Stdout)
+			if err != nil {
+				fmt.Printf("error during output redirection: %v\n", err)
+			}
+			_, err = io.Copy(os.Stderr, &out.Stderr)
+			if err != nil {
+				fmt.Printf("error during output redirection: %v\n", err)
+			}
 		}
 	}
 }
@@ -108,8 +114,14 @@ func DrawProgress(outpipe chan Output, length int) {
 				}
 			}
 			// TODO: inser line break if not done already, but only if there is some printout
-			io.Copy(os.Stdout, &out.Stdout)
-			io.Copy(os.Stderr, &out.Stderr)
+			_, err := io.Copy(os.Stdout, &out.Stdout)
+			if err != nil {
+				fmt.Printf("error during output redirection: %v\n", err)
+			}
+			_, err = io.Copy(os.Stderr, &out.Stderr)
+			if err != nil {
+				fmt.Printf("error during output redirection: %v\n", err)
+			}
 			bar.Add(1)
 		}
 	}
@@ -129,8 +141,14 @@ func AbortOnFailure(outpipe chan Output) {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
 			}
-			io.Copy(os.Stdout, &out.Stdout)
-			io.Copy(os.Stderr, &out.Stderr)
+			_, err := io.Copy(os.Stdout, &out.Stdout)
+			if err != nil {
+				fmt.Printf("error during output redirection: %v\n", err)
+			}
+			_, err = io.Copy(os.Stderr, &out.Stderr)
+			if err != nil {
+				fmt.Printf("error during output redirection: %v\n", err)
+			}
 			if out.Err != nil {
 				break
 			}
