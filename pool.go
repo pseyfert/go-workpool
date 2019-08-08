@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/schollz/progressbar"
@@ -31,7 +32,6 @@ type Output struct {
 
 func process_pipe(tasks chan *exec.Cmd, outpipe chan Output) {
 	conc := cap(tasks)
-	ack := make(chan bool)
 
 	process := func(cmd *exec.Cmd) Output {
 		var out Output
@@ -44,6 +44,8 @@ func process_pipe(tasks chan *exec.Cmd, outpipe chan Output) {
 		return out
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(conc)
 	for i := 0; i < conc; i += 1 {
 		go func() {
 			for {
@@ -51,15 +53,13 @@ func process_pipe(tasks chan *exec.Cmd, outpipe chan Output) {
 				if ok {
 					outpipe <- process(task)
 				} else {
-					ack <- true
+					wg.Done()
 					return
 				}
 			}
 		}()
 	}
-	for i := 0; i < conc; i += 1 {
-		<-ack
-	}
+	wg.Wait()
 	close(outpipe)
 }
 
