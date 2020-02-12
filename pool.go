@@ -84,7 +84,7 @@ func DefaultPrint(outpipe chan Output) {
 					waitStatus := exitError.Sys().(syscall.WaitStatus)
 					ec := waitStatus.ExitStatus()
 					// ec := exitError.ExitCode()
-					fmt.Printf("%d command failed: %s %s\n", ec, out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
+					fmt.Printf("%d command failed: %s\n", ec, strings.Join(out.Cmd.Args, " "))
 				} else {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
@@ -115,12 +115,14 @@ func DrawProgress(outpipe chan Output, length int) {
 					waitStatus := exitError.Sys().(syscall.WaitStatus)
 					ec := waitStatus.ExitStatus()
 					// ec := exitError.ExitCode()
-					fmt.Printf("%d command failed: %s %s\n", ec, out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
+					fmt.Printf("%d command failed: %s\n", ec, strings.Join(out.Cmd.Args, " "))
 				} else {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
+			} else if out.Stdout.Len()+out.Stderr.Len() > 0 {
+				// insert line break if not done already, but only if there is some printout
+				fmt.Println()
 			}
-			// TODO: inser line break if not done already, but only if there is some printout
 			_, err := io.Copy(os.Stdout, &out.Stdout)
 			if err != nil {
 				fmt.Printf("error during output redirection: %v\n", err)
@@ -146,7 +148,7 @@ func AbortOnFailure(outpipe chan Output) {
 					waitStatus := exitError.Sys().(syscall.WaitStatus)
 					ec := waitStatus.ExitStatus()
 					// ec := exitError.ExitCode()
-					fmt.Printf("%d command failed: %s %s\n", ec, out.Cmd.Path, strings.Join(out.Cmd.Args, " "))
+					fmt.Printf("%d command failed: %s\n", ec, strings.Join(out.Cmd.Args, " "))
 				} else {
 					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
 				}
