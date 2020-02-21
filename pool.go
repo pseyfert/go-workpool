@@ -46,24 +46,27 @@ func process_pipe(tasks chan *exec.Cmd, outpipe chan Output) {
 
 	var wg sync.WaitGroup
 	wg.Add(conc)
-	for i := 0; i < conc; i += 1 {
-		go func() {
+	for i := uint64(0); i < uint64(conc); i += 1 {
+		go func(tid uint64) {
 			for {
 				task, ok := <-tasks
 				if ok {
-					outpipe <- process(task)
+					output := process(task)
+					traceOutput(output, tid)
+					outpipe <- output
 				} else {
 					wg.Done()
 					return
 				}
 			}
-		}()
+		}(i)
 	}
 	wg.Wait()
 	close(outpipe)
 }
 
-func Workpool(concurrency int) (chan *exec.Cmd, chan Output) {
+func Workpool(concurrency int, sink io.Writer) (chan *exec.Cmd, chan Output) {
+	startTrace(sink)
 	procpipe := make(chan *exec.Cmd, concurrency)
 	outpipe := make(chan Output, concurrency*2) // just allow some more on the output
 

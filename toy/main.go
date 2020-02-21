@@ -26,7 +26,7 @@ func main() {
 	N := flag.Int("N", 30, "total number of jobs")
 	flag.Parse()
 
-	procpipe, outpipe := workpool.Workpool(*conc)
+	procpipe, outpipe := workpool.Workpool(*conc, nil)
 
 	go func() {
 		for i := 0; i < *N; i += 1 {
