@@ -16,7 +16,7 @@ import (
 	"github.com/pseyfert/go-workpool"
 )
 
-func prepare(pipe chan *exec.Cmd, i int) {
+func prepare(pipe chan workpool.Runner, i int) {
 	targettime := fmt.Sprintf("%ds", i)
 	pipe <- exec.Command("sleep", targettime)
 }

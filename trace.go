@@ -13,6 +13,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"os/exec"
 	"reflect"
 	"sync"
 	"time"
@@ -36,9 +37,19 @@ type TraceEvent struct {
 	Args           interface{} `json:"args"`
 }
 
+type namer interface {
+	Name() string
+}
+
 func makeTraceEvent(output Output, tid uint64) TraceEvent {
+	var name string
+	if v, ok := output.Cmd.(namer); ok {
+		name = v.Name()
+	} else if v, ok := output.Cmd.(*exec.Cmd); ok {
+		name = v.Args[len(v.Args)-1]
+	}
 	return TraceEvent{
-		Name:           output.Cmd.Args[len(output.Cmd.Args)-1],
+		Name:           name,
 		Type:           "X",
 		ClockTimestamp: uint64(output.Start.Sub(reftime) / time.Microsecond),
 		Duration:       uint64(output.End.Sub(output.Start) / time.Microsecond),

@@ -21,22 +21,28 @@ import (
 	"github.com/schollz/progressbar"
 )
 
+type Runner interface {
+	Run() error
+}
+
 type Output struct {
 	Stderr bytes.Buffer
 	Stdout bytes.Buffer
 	Err    error
 	Start  time.Time
 	End    time.Time
-	Cmd    *exec.Cmd
+	Cmd    Runner
 }
 
-func process_pipe(tasks chan *exec.Cmd, outpipe chan Output) {
+func process_pipe(tasks chan Runner, outpipe chan Output) {
 	conc := cap(tasks)
 
-	process := func(cmd *exec.Cmd) Output {
+	process := func(cmd Runner) Output {
 		var out Output
-		cmd.Stdout = &out.Stdout
-		cmd.Stderr = &out.Stderr
+		if v, ok := cmd.(*exec.Cmd); ok {
+			v.Stdout = &out.Stdout
+			v.Stderr = &out.Stderr
+		}
 		out.Start = time.Now()
 		out.Err = cmd.Run()
 		out.End = time.Now()
@@ -65,14 +71,30 @@ func process_pipe(tasks chan *exec.Cmd, outpipe chan Output) {
 	close(outpipe)
 }
 
-func Workpool(concurrency int, sink io.Writer) (chan *exec.Cmd, chan Output) {
+func Workpool(concurrency int, sink io.Writer) (chan Runner, chan Output) {
 	startTrace(sink)
-	procpipe := make(chan *exec.Cmd, concurrency)
+	procpipe := make(chan Runner, concurrency)
 	outpipe := make(chan Output, concurrency*2) // just allow some more on the output
 
 	go process_pipe(procpipe, outpipe)
 
 	return procpipe, outpipe
+}
+
+func errorPrint(out *Output) {
+	if exitError, ok := out.Err.(*exec.ExitError); ok {
+		if v, ok := out.Cmd.(*exec.Cmd); ok {
+			fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), strings.Join(v.Args, " "))
+		} else {
+			fmt.Printf("%d command failed\n", exitError.ExitCode())
+		}
+	} else {
+		if v, ok := out.Cmd.(*exec.Cmd); ok {
+			fmt.Printf("could not run %s: %v\n", v.Path, out.Err)
+		} else {
+			fmt.Printf("could not run: %v\n", out.Err)
+		}
+	}
 }
 
 func DefaultPrint(outpipe chan Output) {
@@ -82,11 +104,7 @@ func DefaultPrint(outpipe chan Output) {
 			break
 		} else {
 			if out.Err != nil {
-				if exitError, ok := out.Err.(*exec.ExitError); ok {
-					fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), strings.Join(out.Cmd.Args, " "))
-				} else {
-					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
-				}
+				errorPrint(&out)
 			}
 			_, err := io.Copy(os.Stdout, &out.Stdout)
 			if err != nil {
@@ -110,11 +128,7 @@ func DrawProgress(outpipe chan Output, length int) {
 		} else {
 			if out.Err != nil {
 				fmt.Println()
-				if exitError, ok := out.Err.(*exec.ExitError); ok {
-					fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), strings.Join(out.Cmd.Args, " "))
-				} else {
-					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
-				}
+				errorPrint(&out)
 			} else if out.Stdout.Len()+out.Stderr.Len() > 0 {
 				// insert line break if not done already, but only if there is some printout
 				fmt.Println()
@@ -141,9 +155,13 @@ func AbortOnFailure(outpipe chan Output) {
 		} else {
 			if out.Err != nil {
 				if exitError, ok := out.Err.(*exec.ExitError); ok {
-					fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), strings.Join(out.Cmd.Args, " "))
+					if v, ok := out.Cmd.(*exec.Cmd); ok {
+						fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), strings.Join(v.Args, " "))
+					} else {
+						fmt.Printf("%d command failed\n", exitError.ExitCode())
+					}
 				} else {
-					fmt.Printf("could not run %s: %v\n", out.Cmd.Path, out.Err)
+					fmt.Printf("could not run: %v\n", out.Err)
 				}
 			}
 			_, err := io.Copy(os.Stdout, &out.Stdout)
