@@ -25,6 +25,11 @@ type Runner interface {
 	Run() error
 }
 
+type SetStdoutStderrer interface {
+	SetStdout(io.Writer)
+	SetStderr(io.Writer)
+}
+
 type Output struct {
 	Stderr bytes.Buffer
 	Stdout bytes.Buffer
@@ -42,6 +47,9 @@ func process_pipe(tasks chan Runner, outpipe chan Output) {
 		if v, ok := cmd.(*exec.Cmd); ok {
 			v.Stdout = &out.Stdout
 			v.Stderr = &out.Stderr
+		} else if v, ok := cmd.(SetStdoutStderrer); ok {
+			v.SetStdout(&out.Stdout)
+			v.SetStderr(&out.Stderr)
 		}
 		out.Start = time.Now()
 		out.Err = cmd.Run()
