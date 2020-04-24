@@ -41,6 +41,10 @@ type namer interface {
 	Name() string
 }
 
+type cater interface {
+	Cat() string
+}
+
 func makeTraceEvent(output Output, tid uint64) TraceEvent {
 	var name string
 	if v, ok := output.Cmd.(namer); ok {
@@ -48,8 +52,13 @@ func makeTraceEvent(output Output, tid uint64) TraceEvent {
 	} else if v, ok := output.Cmd.(*exec.Cmd); ok {
 		name = v.Args[len(v.Args)-1]
 	}
+	var cat string
+	if v, ok := output.Cmd.(cater); ok {
+		cat = v.Cat()
+	}
 	return TraceEvent{
 		Name:           name,
+		Categories:     cat,
 		Type:           "X",
 		ClockTimestamp: uint64(output.Start.Sub(reftime) / time.Microsecond),
 		Duration:       uint64(output.End.Sub(output.Start) / time.Microsecond),
