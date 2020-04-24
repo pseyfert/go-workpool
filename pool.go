@@ -54,17 +54,13 @@ func process_pipe(tasks chan Runner, outpipe chan Output) {
 	wg.Add(conc)
 	for i := uint64(0); i < uint64(conc); i += 1 {
 		go func(tid uint64) {
-			for {
-				task, ok := <-tasks
-				if ok {
-					output := process(task)
-					traceOutput(output, tid)
-					outpipe <- output
-				} else {
-					wg.Done()
-					return
-				}
+			for task := range tasks {
+				output := process(task)
+				traceOutput(output, tid)
+				outpipe <- output
 			}
+			wg.Done()
+			return
 		}(i)
 	}
 	wg.Wait()
@@ -98,22 +94,17 @@ func errorPrint(out *Output) {
 }
 
 func DefaultPrint(outpipe chan Output) {
-	for {
-		out, ok := <-outpipe
-		if !ok {
-			break
-		} else {
-			if out.Err != nil {
-				errorPrint(&out)
-			}
-			_, err := io.Copy(os.Stdout, &out.Stdout)
-			if err != nil {
-				fmt.Printf("error during output redirection: %v\n", err)
-			}
-			_, err = io.Copy(os.Stderr, &out.Stderr)
-			if err != nil {
-				fmt.Printf("error during output redirection: %v\n", err)
-			}
+	for out := range outpipe {
+		if out.Err != nil {
+			errorPrint(&out)
+		}
+		_, err := io.Copy(os.Stdout, &out.Stdout)
+		if err != nil {
+			fmt.Printf("error during output redirection: %v\n", err)
+		}
+		_, err = io.Copy(os.Stderr, &out.Stderr)
+		if err != nil {
+			fmt.Printf("error during output redirection: %v\n", err)
 		}
 	}
 }
@@ -121,60 +112,50 @@ func DefaultPrint(outpipe chan Output) {
 func DrawProgress(outpipe chan Output, length int) {
 	bar := progressbar.NewOptions(length, progressbar.OptionShowIts(), progressbar.OptionShowCount(), progressbar.OptionClearOnFinish())
 	bar.RenderBlank()
-	for {
-		out, ok := <-outpipe
-		if !ok {
-			break
-		} else {
-			if out.Err != nil {
-				fmt.Println()
-				errorPrint(&out)
-			} else if out.Stdout.Len()+out.Stderr.Len() > 0 {
-				// insert line break if not done already, but only if there is some printout
-				fmt.Println()
-			}
-			_, err := io.Copy(os.Stdout, &out.Stdout)
-			if err != nil {
-				fmt.Printf("error during output redirection: %v\n", err)
-			}
-			_, err = io.Copy(os.Stderr, &out.Stderr)
-			if err != nil {
-				fmt.Printf("error during output redirection: %v\n", err)
-			}
-			bar.Add(1)
+	for out := range outpipe {
+		if out.Err != nil {
+			fmt.Println()
+			errorPrint(&out)
+		} else if out.Stdout.Len()+out.Stderr.Len() > 0 {
+			// insert line break if not done already, but only if there is some printout
+			fmt.Println()
 		}
+		_, err := io.Copy(os.Stdout, &out.Stdout)
+		if err != nil {
+			fmt.Printf("error during output redirection: %v\n", err)
+		}
+		_, err = io.Copy(os.Stderr, &out.Stderr)
+		if err != nil {
+			fmt.Printf("error during output redirection: %v\n", err)
+		}
+		bar.Add(1)
 	}
 	bar.Finish()
 }
 
 func AbortOnFailure(outpipe chan Output) {
-	for {
-		out, ok := <-outpipe
-		if !ok {
-			break
-		} else {
-			if out.Err != nil {
-				if exitError, ok := out.Err.(*exec.ExitError); ok {
-					if v, ok := out.Cmd.(*exec.Cmd); ok {
-						fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), strings.Join(v.Args, " "))
-					} else {
-						fmt.Printf("%d command failed\n", exitError.ExitCode())
-					}
+	for out := range outpipe {
+		if out.Err != nil {
+			if exitError, ok := out.Err.(*exec.ExitError); ok {
+				if v, ok := out.Cmd.(*exec.Cmd); ok {
+					fmt.Printf("%d command failed: %s\n", exitError.ExitCode(), strings.Join(v.Args, " "))
 				} else {
-					fmt.Printf("could not run: %v\n", out.Err)
+					fmt.Printf("%d command failed\n", exitError.ExitCode())
 				}
+			} else {
+				fmt.Printf("could not run: %v\n", out.Err)
 			}
-			_, err := io.Copy(os.Stdout, &out.Stdout)
-			if err != nil {
-				fmt.Printf("error during output redirection: %v\n", err)
-			}
-			_, err = io.Copy(os.Stderr, &out.Stderr)
-			if err != nil {
-				fmt.Printf("error during output redirection: %v\n", err)
-			}
-			if out.Err != nil {
-				break
-			}
+		}
+		_, err := io.Copy(os.Stdout, &out.Stdout)
+		if err != nil {
+			fmt.Printf("error during output redirection: %v\n", err)
+		}
+		_, err = io.Copy(os.Stderr, &out.Stderr)
+		if err != nil {
+			fmt.Printf("error during output redirection: %v\n", err)
+		}
+		if out.Err != nil {
+			break
 		}
 	}
 }
